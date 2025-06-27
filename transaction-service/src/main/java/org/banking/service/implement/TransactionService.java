@@ -10,7 +10,8 @@ import org.banking.service.dtos.Transaction;
 import org.banking.service.dtos.UpdateTransactionInput;
 import org.banking.service.entities.TransactionEntity;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.cache.CacheManager;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -23,9 +24,6 @@ public class TransactionService extends ServiceBase implements ITransactionServi
 
     @Autowired
     IRepository<TransactionEntity> repository;
-    CacheManager cacheManager;
-
-    private final String CACHE_PREFIX = "transaction.";
 
     @Override
     public ServiceResult<Transaction> create(CreateTransactionInput input) {
@@ -60,6 +58,7 @@ public class TransactionService extends ServiceBase implements ITransactionServi
     }
 
     @Override
+    @Cacheable(value = "transactions", key = "#id")
     public ServiceResult<Transaction> get(String id) {
         var value = repository.get(id);
         if (value != null) {
@@ -69,11 +68,18 @@ public class TransactionService extends ServiceBase implements ITransactionServi
     }
 
     @Override
-    public ServiceResult<List<Transaction>> find(int page, int size) {
+    public ServiceResult<List<Transaction>> find(int page, int size) { // page 0 is the first page, size default 100
+        if (page < 0) {
+            page = 0;
+        }
+        if (size < 0) {
+            size = 100;
+        }
         return success(repository.find(page, size).stream().map(this::map).toList());
     }
 
     @Override
+    @CacheEvict(value = "transactions", key = "#input.id")
     public ServiceResult update(UpdateTransactionInput input) {
         if (input == null) {
             throw new IllegalArgumentException("update transaction input is null");
@@ -103,6 +109,7 @@ public class TransactionService extends ServiceBase implements ITransactionServi
     }
 
     @Override
+    @CacheEvict(value = "transactions", key = "#id")
     public ServiceResult delete(String id) {
         repository.delete(id);
         return success();

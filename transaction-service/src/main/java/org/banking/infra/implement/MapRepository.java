@@ -55,13 +55,7 @@ public class MapRepository<T extends EntityBase> implements IRepository<T> {
     }
 
     @Override
-    public List<T> find(int page, int size) { // page 0 is the first page, size default 100
-        if (page < 0) {
-            page = 0;
-        }
-        if (size < 0) {
-            size = 100;
-        }
+    public List<T> find(int page, int size) {
         int start = Math.min(page * size, data.size());
         return data.values().stream()
                 .sorted(Comparator.comparing(T::getCreatedTime).reversed())

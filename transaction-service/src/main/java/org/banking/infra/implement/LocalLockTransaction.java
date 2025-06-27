@@ -17,6 +17,9 @@ public class LocalLockTransaction implements ITransaction {
         try {
             action.run();
         }
-        finally { itemLock.unlock(); }
+        finally {
+            locks.remove(key);
+            itemLock.unlock();
+        }
     }
 }
