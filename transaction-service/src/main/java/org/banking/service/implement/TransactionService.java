@@ -10,9 +10,11 @@ import org.banking.service.dtos.Transaction;
 import org.banking.service.dtos.UpdateTransactionInput;
 import org.banking.service.entities.TransactionEntity;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
+import java.math.BigDecimal;
 import java.util.*;
 
 @Service
@@ -21,11 +23,27 @@ public class TransactionService extends ServiceBase implements ITransactionServi
 
     @Autowired
     IRepository<TransactionEntity> repository;
+    CacheManager cacheManager;
 
     private final String CACHE_PREFIX = "transaction.";
 
     @Override
     public ServiceResult<Transaction> create(CreateTransactionInput input) {
+        if (input == null) {
+            throw new IllegalArgumentException("create transaction input is null");
+        }
+        if (!StringUtils.hasText(input.getAccount())) {
+            throw new IllegalArgumentException("transaction account cannot be empty");
+        }
+        if (!StringUtils.hasText(input.getType())) {
+            throw new IllegalArgumentException("transaction type cannot be empty");
+        }
+        if (!StringUtils.hasText(input.getProduct())) {
+            throw new IllegalArgumentException("transaction product cannot be empty");
+        }
+        if (input.getAmount() == null || input.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("transaction amount should be positive");
+        }
         var id = repository.insert(new TransactionEntity()
                 .setAccount(input.getAccount())
                 .setType(input.getType())
@@ -57,6 +75,15 @@ public class TransactionService extends ServiceBase implements ITransactionServi
 
     @Override
     public ServiceResult update(UpdateTransactionInput input) {
+        if (input == null) {
+            throw new IllegalArgumentException("update transaction input is null");
+        }
+        if (!StringUtils.hasText(input.getId())) {
+            throw new IllegalArgumentException("transaction id cannot be empty");
+        }
+        if (input.getAmount() != null && input.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("transaction amount should be positive");
+        }
         if (repository.exist(input.getId())) {
             repository.update(input.getId(), t -> {
                 if (input.getAmount() != null) {
