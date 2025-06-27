@@ -1,30 +1,52 @@
 package org.banking.infra.implement;
 
 import org.banking.infra.IRepository;
+import org.banking.infra.ITransaction;
 import org.banking.infra.base.EntityBase;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 @Repository
 public class MapRepository<T extends EntityBase> implements IRepository<T> {
+
+    @Autowired
+    ITransaction transaction;
     private final Map<String, T> data = new ConcurrentHashMap<>();
+    private String table;
+
+    public void init(String table) {
+        this.table = table;
+    }
 
     @Override
-    public T save(T value) {
+    public String insert(T value) {
+        String id = null;
         if (value != null) {
-            String id = UUID.randomUUID().toString();
+            id = UUID.randomUUID().toString();
             value.setId(id);
             value.setCreatedTime(Instant.now());
             data.put(value.getId(), value);
         }
-        return value;
+        return id;
+    }
+
+    @Override
+    public void update(String id, Consumer<T> modify) {
+        if (data.containsKey(id)) {
+            transaction.execute(table + "." + id, () -> {
+                var value = data.get(id);
+                if (value != null) {
+                    modify.accept(value);
+                    data.put(value.getId(), value);
+                }
+            });
+        }
     }
 
     @Override
@@ -33,7 +55,13 @@ public class MapRepository<T extends EntityBase> implements IRepository<T> {
     }
 
     @Override
-    public List<T> find(int page, int size) {
+    public List<T> find(int page, int size) { // page 0 is the first page, size default 100
+        if (page < 0) {
+            page = 0;
+        }
+        if (size < 0) {
+            size = 100;
+        }
         int start = Math.min(page * size, data.size());
         return data.values().stream()
                 .sorted(Comparator.comparing(T::getCreatedTime).reversed())
@@ -45,5 +73,10 @@ public class MapRepository<T extends EntityBase> implements IRepository<T> {
     @Override
     public void delete(String id) {
         data.remove(id);
+    }
+
+    @Override
+    public boolean exist(String id) {
+        return data.containsKey(id);
     }
 }
