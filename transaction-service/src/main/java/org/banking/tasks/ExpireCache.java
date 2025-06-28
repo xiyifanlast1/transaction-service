@@ -10,9 +10,9 @@ public class ExpireCache {
 
     @Autowired
     ICache cache;
-    @Scheduled(fixedRate = 30*1000, initialDelay = 30*1000)
-    public void expire()
-    {
+
+    @Scheduled(fixedRate = 30 * 1000, initialDelay = 30 * 1000)
+    public void expire() {
         cache.expire();
     }
 }

@@ -1,6 +1,7 @@
 package org.banking.service.implement;
 
 import lombok.extern.slf4j.Slf4j;
+import org.banking.infra.ICache;
 import org.banking.infra.IRepository;
 import org.banking.infra.base.ServiceBase;
 import org.banking.infra.base.ServiceResult;
@@ -10,7 +11,6 @@ import org.banking.service.dtos.Transaction;
 import org.banking.service.dtos.UpdateTransactionInput;
 import org.banking.service.entities.TransactionEntity;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
@@ -26,7 +26,7 @@ public class TransactionService extends ServiceBase implements ITransactionServi
     @Autowired
     IRepository<TransactionEntity> repository;
     @Autowired
-    CacheManager cacheManager;
+    ICache cache;
 
     @Override
     public ServiceResult<Transaction> create(CreateTransactionInput input) {
@@ -78,8 +78,32 @@ public class TransactionService extends ServiceBase implements ITransactionServi
         if (size < 0) {
             size = 100;
         }
-
-        return success(repository.find(page, size).stream().map(this::map).toList());
+        var ids = repository.findIds(page, size);
+        List<String> cacheKeys = ids.stream().map(this::getCacheKey).toList();
+        var cachedResult = cache.getMany(cacheKeys, Transaction.class);
+        List<String> missingIds = new ArrayList<>();
+        for (var id : ids) {
+            if (!cachedResult.containsKey(getCacheKey(id))) {
+                missingIds.add(id);
+            }
+        }
+        if (!missingIds.isEmpty()) {
+            var dbResult = repository.getByIds(missingIds);
+            Map<String, Object> needCache = new HashMap<>();
+            for (var r : dbResult) {
+                var cacheKey = getCacheKey(r.getId());
+                var dto = map(r);
+                needCache.put(cacheKey, dto);
+                cachedResult.put(cacheKey, dto);
+            }
+            cache.setMany(needCache);
+        }
+        List<Transaction> result = new ArrayList<>();
+        for (var id : ids) {
+            result.add(cachedResult.get(getCacheKey(id)));
+        }
+        return success(result);
+//        return success(repository.find(page, size).stream().map(this::map).toList());
     }
 
     @Override
@@ -133,5 +157,10 @@ public class TransactionService extends ServiceBase implements ITransactionServi
                     .setCreatedTime(entity.getCreatedTime());
         }
         return result;
+    }
+
+    private String getCacheKey(String id)
+    {
+        return "transactions." + id;
     }
 }

@@ -55,10 +55,33 @@ public class MapRepository<T extends EntityBase> implements IRepository<T> {
     }
 
     @Override
+    public List<T> getByIds(List<String> ids) {
+        List<T> result = new ArrayList<>();
+        for (var id : ids) {
+            var value = data.get(id);
+            if (value != null) {
+                result.add(value);
+            }
+        }
+        return result;
+    }
+
+    @Override
     public List<T> find(int page, int size) {
         int start = Math.min(page * size, data.size());
         return data.values().stream()
                 .sorted(Comparator.comparing(T::getCreatedTime).reversed())
+                .skip(start)
+                .limit(size)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<String> findIds(int page, int size) {
+        int start = Math.min(page * size, data.size());
+        return data.values().stream()
+                .sorted(Comparator.comparing(T::getCreatedTime).reversed())
+                .map(EntityBase::getId)
                 .skip(start)
                 .limit(size)
                 .collect(Collectors.toList());
