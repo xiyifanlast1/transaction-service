@@ -78,6 +78,9 @@ public class TransactionService extends ServiceBase implements ITransactionServi
         if (size < 0) {
             size = 100;
         }
+        // here just an example for customized cache if we need.
+        // in this case, we need get many or set many to cache.
+        // so need to build cache manager ourselves, and apply this to other functions as well
         var ids = repository.findIds(page, size);
         List<String> cacheKeys = ids.stream().map(this::getCacheKey).toList();
         var cachedResult = cache.getMany(cacheKeys, Transaction.class);
