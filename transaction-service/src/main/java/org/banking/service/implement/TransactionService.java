@@ -10,6 +10,7 @@ import org.banking.service.dtos.Transaction;
 import org.banking.service.dtos.UpdateTransactionInput;
 import org.banking.service.entities.TransactionEntity;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
@@ -24,6 +25,8 @@ public class TransactionService extends ServiceBase implements ITransactionServi
 
     @Autowired
     IRepository<TransactionEntity> repository;
+    @Autowired
+    CacheManager cacheManager;
 
     @Override
     public ServiceResult<Transaction> create(CreateTransactionInput input) {
@@ -75,6 +78,7 @@ public class TransactionService extends ServiceBase implements ITransactionServi
         if (size < 0) {
             size = 100;
         }
+
         return success(repository.find(page, size).stream().map(this::map).toList());
     }
 
@@ -112,6 +116,7 @@ public class TransactionService extends ServiceBase implements ITransactionServi
     @CacheEvict(value = "transactions", key = "#id")
     public ServiceResult delete(String id) {
         repository.delete(id);
+        log.info("transaction {} is deleted", id);
         return success();
     }
 
