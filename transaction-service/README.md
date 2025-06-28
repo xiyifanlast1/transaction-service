@@ -16,15 +16,6 @@ The system stores data in-memory, supports caching mechanisms for performance op
 
 ## Dependencies
 
-- Java 21
-- Spring Boot 3.2.0
-- Spring Web
-- Spring Cache
-- Redis（缓存）
-- Maven（项目管理）
-- Docker（容器化）
-- Kubernetes（部署）
-  - Gatling（压力测试）
 ### spring-boot-starter-web
 For building REST API and Web application 
 ### lombok
