@@ -119,6 +119,7 @@ public class TransactionService extends ServiceBase implements ITransactionServi
             throw new IllegalArgumentException("transaction amount should be positive");
         }
         if (repository.exist(input.getId())) {
+            cache.remove(getCacheKey(input.getId()));
             repository.update(input.getId(), t -> {
                 if (input.getAmount() != null) {
                     t.setAmount(input.getAmount());
@@ -139,6 +140,7 @@ public class TransactionService extends ServiceBase implements ITransactionServi
     @Override
     @CacheEvict(value = "transactions", key = "#id")
     public ServiceResult delete(String id) {
+        cache.remove(getCacheKey(id));
         repository.delete(id);
         log.info("transaction {} is deleted", id);
         return success();
